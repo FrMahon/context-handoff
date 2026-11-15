@@ -52,7 +52,7 @@ test('reads only the tail of a large file', () => {
 });
 
 test('getThreshold falls back to 150000 on invalid values', () => {
-  for (const v of ['abc', '-5', '0', '', undefined]) {
+  for (const v of ['abc', '-5', '0', '', undefined, '150k', '1e5', '150,000', '150_000', '2e5', ' 1000 x']) {
     assert.strictEqual(getThreshold({ CONTEXT_HANDOFF_THRESHOLD: v }), 150000);
   }
   assert.strictEqual(getThreshold({}), 150000);
@@ -141,4 +141,15 @@ test('run: session_id with path separators cannot escape tmpDir', () => {
   run({ session_id: '../../evil', transcript_path: write([asst(100, 0, 0)]) }, ENV, dir);
   assert.strictEqual(markers(dir).length, 1);
   assert.ok(!fs.existsSync(path.join(dir, '..', '..', 'evil')));
+});
+
+test('hook messages name the plugin-qualified skill', () => {
+  for (const stage of [0, 1]) {
+    const r = decide({ tokens: stage === 0 ? 160000 : 200000, threshold: 150000, stage });
+    assert.match(r.message, /context-handoff:context-handoff/);
+  }
+});
+
+test('reminder asks to refresh the handoff if state changed', () => {
+  assert.match(decide({ tokens: 200000, threshold: 150000, stage: 1 }).message, /refresh/i);
 });

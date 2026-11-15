@@ -36,12 +36,13 @@ const DEFAULT_THRESHOLD = 150000;
 const REMINDER_GAP = 50000;
 
 function getThreshold(env) {
-  const n = Number.parseInt(env && env.CONTEXT_HANDOFF_THRESHOLD, 10);
+  const v = env && env.CONTEXT_HANDOFF_THRESHOLD;
+  const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : 0; // "150k" or "1e5" must not parse as 150 or 1
   return n > 0 ? n : DEFAULT_THRESHOLD;
 }
 
-const ALERT = 'CONTEXT HANDOFF: the conversation context is large. Invoke the `context-handoff` skill NOW, before anything else. Tell the user in their own language that context is high and whether it is better to clear now or to finish what is in progress first.';
-const REMINDER = 'CONTEXT HANDOFF REMINDER: context keeps growing. If the handoff was not done yet, invoke the `context-handoff` skill now; if it was, just remind the user briefly to run /clear.';
+const ALERT = 'CONTEXT HANDOFF: the conversation context is large. Invoke the `context-handoff:context-handoff` skill NOW, before anything else. Tell the user in their own language that context is high and whether it is better to clear now or to finish what is in progress first.';
+const REMINDER = 'CONTEXT HANDOFF REMINDER: context keeps growing. If the handoff was not done yet, invoke the `context-handoff:context-handoff` skill now; if it was done but the state changed since (work finished, new commits), refresh the memory and the resume prompt first; then remind the user briefly to run /clear.';
 
 // stage: 0 = nothing sent, 1 = warned, 2 = reminded. Only a rise in stage produces a message.
 function decide({ tokens, threshold, stage }) {

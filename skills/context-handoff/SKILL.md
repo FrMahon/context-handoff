@@ -10,6 +10,7 @@ Prepare a clean `/clear` so nothing is lost. Do it once per stretch, in the user
 ## Steps
 
 1. **Say whether to clear now or finish first.** If a change is half-done, uncommitted, or a test is running, recommend finishing that first and say what is left. Otherwise recommend clearing now. One or two sentences.
+   If you said to finish first: finish it, then do steps 2-4 yourself right afterwards, so the saved state and the prompt describe the finished work. Do not save a handoff that describes work you are about to complete.
 
 2. **Save state to memory.** If you have a persistent memory directory, update the existing file for this project's status (create one only if none exists) instead of adding a duplicate. Record: what is being done, decisions made and why, pending work. Keep the index in sync if your memory uses one. With no memory system, skip this step and put the same content in the prompt of step 4.
 
@@ -21,4 +22,4 @@ Prepare a clean `/clear` so nothing is lost. Do it once per stretch, in the user
    - what is left, in order
    - which files or docs to read first
 
-End with one line: "Run /clear and paste the prompt above." Do not repeat the handoff again in this stretch unless the user asks.
+End with one line: "Run /clear and paste the prompt above." Do not repeat the handoff in this stretch unless the user asks or the state changed after you delivered it (then refresh memory and prompt once).
