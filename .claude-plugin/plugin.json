@@ -2,7 +2,7 @@
   "name": "context-handoff",
   "description": "Automatic context handoff: when the conversation nears ~150k tokens, Claude saves state to memory, notes the branch and hands you a ready-to-paste prompt for /clear.",
   "version": "0.1.0",
-  "license": "MIT",
+  "license": "Unlicense",
   "author": { "name": "FrMahon" },
   "keywords": ["context", "handoff", "memory", "tokens", "clear"]
 }

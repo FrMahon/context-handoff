@@ -1,64 +1,53 @@
-# context-handoff
+# 🧠 context-handoff
 
-Plugin de Claude Code que avisa **solo** cuando la conversación llega a ~150k tokens de contexto y deja todo listo para hacer `/clear` sin perder el hilo: estado guardado en memoria, rama y cambios anotados, y un prompt para pegar en la sesión nueva.
+**A Claude Code plugin that warns you before your context fills up and gets everything ready for `/clear`, so you never lose the thread.**
 
-*English: a Claude Code plugin that, when your conversation reaches ~150k tokens of context, makes Claude save state to memory, note the git branch and give you a ready-to-paste prompt to resume after `/clear`. Automatic, once per stretch.*
+## ✨ What it does
 
-## Cómo funciona
+When the conversation reaches ~150k tokens, Claude automatically:
 
-1. Un hook `UserPromptSubmit` (Node, sin dependencias) lee en cada mensaje el uso de tokens del último mensaje del asistente en el transcript.
-2. Al pasar el umbral inyecta una instrucción para que Claude use la skill `context-handoff`. Una sola vez por tramo, con un recordatorio a umbral + 50k.
-3. La skill: dice si conviene limpiar ya o terminar antes lo que está en curso, actualiza la memoria del proyecto, registra rama y `git status`, y entrega el prompt de reanudación.
+1. 🧭 Tells you whether to clear **now** or finish what you're doing first.
+2. 💾 Saves state, decisions and pending work to the project's memory.
+3. 🌿 Notes the current branch and uncommitted changes.
+4. 📋 Gives you a **ready-to-paste prompt** for the new session.
 
-Si el contexto baja mucho (por ejemplo tras `/clear`), el aviso se rearma.
+It warns once per stretch (with a reminder at 200k).
 
-## Instalación
+## 🚀 Install
 
-Requiere Node >= 18.
+Requires Node ≥ 18.
 
 ```
-/plugin marketplace add <ruta-local-o-usuario/repo>
+/plugin marketplace add FrMahon/context-handoff
 /plugin install context-handoff@context-handoff
 ```
 
-También podés invocar la skill a mano: `/context-handoff`.
+That's it, nothing else to configure. You can also run it manually with `/context-handoff`.
 
-## Configuración
+## ⚙️ How it works
 
-| Variable | Default | Qué hace |
-|---|---|---|
-| `CONTEXT_HANDOFF_THRESHOLD` | `150000` | Tokens de contexto a partir de los cuales avisa. |
+A hook runs on every message and reads the token count from the local transcript. Past the threshold, it asks Claude to use the `context-handoff` skill. Below the threshold it costs zero tokens.
 
-## Privacidad
+To change the threshold:
 
-El hook solo lee el conteo de tokens del transcript local. No envía nada a ningún lado.
+```
+CONTEXT_HANDOFF_THRESHOLD=120000
+```
 
-## Costo en tokens
+## ⚠️ Limitations
 
-Por debajo del umbral el hook corre en tu máquina y no suma ningún token al contexto. Lo único fijo es la descripción de la skill (unas decenas de tokens, estimación). Al dispararse, una vez por tramo: el mensaje del hook, el cuerpo de la skill y unas 3 llamadas a herramientas (git y memoria), cada una releyendo el contexto desde caché. A cambio, un `/clear` abarata todos los mensajes siguientes y evita un auto-compact. Son estimaciones, no mediciones.
+- The warning is an injected instruction, not a command: Claude almost always follows it, but it's not guaranteed.
+- It doesn't run `/clear` for you; that's up to you.
+- If the transcript format changes, the hook fails silently and simply doesn't warn.
 
-## Barra de estado (opcional)
+## 🔒 Privacy
 
-El plugin no instala ninguna barra de estado. Si usás una propia con `statusLine`, podés colorear el contexto con el mismo umbral leyendo `CONTEXT_HANDOFF_THRESHOLD`.
+Everything runs on your machine. Nothing is sent anywhere.
 
-## Limitaciones
-
-- El aviso es una instrucción inyectada (`additionalContext`), no una orden: Claude casi siempre la sigue, pero no es garantía absoluta.
-- No ejecuta `/clear` ni compacta por su cuenta; eso lo hacés vos.
-- Si el formato del transcript cambia en una versión futura, el hook falla en silencio (no rompe la sesión) y simplemente no avisa.
-
-## Probado con
-
-Sesión real de Claude Code (2026-11-14, plugin cargado con `--plugin-dir`, `CONTEXT_HANDOFF_THRESHOLD=100`): el primer turno no avisa (todavía no hay uso de tokens), el segundo recibe la instrucción de `CONTEXT HANDOFF` y el tercero no la repite. Observación: si el usuario pide explícitamente otra cosa, Claude puede priorizarla sobre el aviso (ver Limitaciones).
-
-También con el plugin ya instalado y el umbral por defecto (150000): con un contexto real de más de 150k tokens, el segundo turno recibió el aviso, recomendó limpiar, guardó el estado y entregó el prompt de reanudación; el tercero no lo repitió. La secuencia de dos pasos (aviso a 150k y recordatorio a 200k) está cubierta solo por tests unitarios.
-
-## Desarrollo
+## 🛠️ Development
 
 ```
 npm test
 ```
 
-## Licencia
-
-MIT
+Free to use. Public domain ([Unlicense](LICENSE)).
