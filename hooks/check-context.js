@@ -1,0 +1,76 @@
+const fs = require('node:fs');
+const path = require('node:path');
+
+const TAIL_BYTES = 256 * 1024;
+
+// Context size = tokens the model saw on its last turn, from the transcript's last assistant usage.
+function getContextTokens(transcriptPath) {
+  try {
+    const fd = fs.openSync(transcriptPath, 'r');
+    try {
+      const size = fs.fstatSync(fd).size;
+      const start = Math.max(0, size - TAIL_BYTES);
+      const buf = Buffer.alloc(size - start);
+      fs.readSync(fd, buf, 0, buf.length, start);
+      const lines = buf.toString('utf8').split('\n');
+      if (start > 0) lines.shift(); // first line is cut mid-way
+      for (let i = lines.length - 1; i >= 0; i--) {
+        let entry;
+        try { entry = JSON.parse(lines[i]); } catch { continue; }
+        if (entry.type !== 'assistant' || entry.isSidechain) continue;
+        const u = entry.message && entry.message.usage;
+        if (!u) continue;
+        const total = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+        if (total > 0) return total;
+      }
+      return null;
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return null;
+  }
+}
+
+const DEFAULT_THRESHOLD = 150000;
+const REMINDER_GAP = 50000;
+
+function getThreshold(env) {
+  const n = Number.parseInt(env && env.CONTEXT_HANDOFF_THRESHOLD, 10);
+  return n > 0 ? n : DEFAULT_THRESHOLD;
+}
+
+const ALERT = 'CONTEXT HANDOFF: the conversation context is large. Invoke the `context-handoff` skill NOW, before anything else. Tell the user in their own language that context is high and whether it is better to clear now or to finish what is in progress first.';
+const REMINDER = 'CONTEXT HANDOFF REMINDER: context keeps growing. If the handoff was not done yet, invoke the `context-handoff` skill now; if it was, just remind the user briefly to run /clear.';
+
+// stage: 0 = nothing sent, 1 = warned, 2 = reminded. Only a rise in stage produces a message.
+function decide({ tokens, threshold, stage }) {
+  if (tokens < threshold * 0.5) return { stage: 0, message: null };
+  if (stage === 0 && tokens >= threshold) {
+    return { stage: tokens >= threshold + REMINDER_GAP ? 2 : 1, message: ALERT };
+  }
+  if (stage === 1 && tokens >= threshold + REMINDER_GAP) return { stage: 2, message: REMINDER };
+  return { stage, message: null };
+}
+
+function run(input, env, tmpDir) {
+  try {
+    if (!input || !input.session_id || !input.transcript_path) return null;
+    const tokens = getContextTokens(input.transcript_path);
+    if (tokens === null) return null;
+    const marker = path.join(tmpDir, 'context-handoff-' + String(input.session_id).replace(/[^\w-]/g, '_'));
+    let stage = 0;
+    try { stage = Number.parseInt(fs.readFileSync(marker, 'utf8'), 10) || 0; } catch { /* no marker yet */ }
+    const next = decide({ tokens, threshold: getThreshold(env), stage });
+    if (next.stage !== stage) {
+      if (next.stage === 0) fs.rmSync(marker, { force: true });
+      else fs.writeFileSync(marker, String(next.stage));
+    }
+    if (!next.message) return null;
+    return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: next.message } };
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { getContextTokens, getThreshold, decide, run };

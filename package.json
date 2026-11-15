@@ -1,0 +1,8 @@
+{
+  "name": "context-handoff",
+  "version": "0.1.0",
+  "description": "Claude Code plugin: automatic context handoff before /clear",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": { "test": "node --test tests/" }
+}
