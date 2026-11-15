@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 // Read the end of the transcript; widen once if a huge pasted prompt hides the last assistant entry.
+// shortcut: gives up past 8MB (no warning), raise the second window if that ever happens.
 const WINDOWS = [256 * 1024, 8 * 1024 * 1024];
 
 function lastUsage(fd, size, bytes) {
