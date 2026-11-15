@@ -1,0 +1,12 @@
+{
+  "name": "context-handoff",
+  "description": "Automatic context handoff for Claude Code.",
+  "owner": { "name": "FrMahon" },
+  "plugins": [
+    {
+      "name": "context-handoff",
+      "source": "./",
+      "description": "Automatic context handoff before /clear when the conversation reaches ~150k tokens."
+    }
+  ]
+}

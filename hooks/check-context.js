@@ -74,3 +74,14 @@ function run(input, env, tmpDir) {
 }
 
 module.exports = { getContextTokens, getThreshold, decide, run };
+
+function main() {
+  try {
+    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+    const out = run(input, process.env, require('node:os').tmpdir());
+    if (out) process.stdout.write(JSON.stringify(out));
+  } catch { /* never break the session */ }
+  process.exit(0);
+}
+
+if (require.main === module) main();
