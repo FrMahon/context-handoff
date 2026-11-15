@@ -33,6 +33,14 @@ También podés invocar la skill a mano: `/context-handoff`.
 
 El hook solo lee el conteo de tokens del transcript local. No envía nada a ningún lado.
 
+## Costo en tokens
+
+Por debajo del umbral el hook corre en tu máquina y no suma ningún token al contexto. Lo único fijo es la descripción de la skill (unas decenas de tokens, estimación). Al dispararse, una vez por tramo: el mensaje del hook, el cuerpo de la skill y unas 3 llamadas a herramientas (git y memoria), cada una releyendo el contexto desde caché. A cambio, un `/clear` abarata todos los mensajes siguientes y evita un auto-compact. Son estimaciones, no mediciones.
+
+## Barra de estado (opcional)
+
+El plugin no instala ninguna barra de estado. Si usás una propia con `statusLine`, podés colorear el contexto con el mismo umbral leyendo `CONTEXT_HANDOFF_THRESHOLD`.
+
 ## Limitaciones
 
 - El aviso es una instrucción inyectada (`additionalContext`), no una orden: Claude casi siempre la sigue, pero no es garantía absoluta.
@@ -42,6 +50,8 @@ El hook solo lee el conteo de tokens del transcript local. No envía nada a ning
 ## Probado con
 
 Sesión real de Claude Code (2026-11-14, plugin cargado con `--plugin-dir`, `CONTEXT_HANDOFF_THRESHOLD=100`): el primer turno no avisa (todavía no hay uso de tokens), el segundo recibe la instrucción de `CONTEXT HANDOFF` y el tercero no la repite. Observación: si el usuario pide explícitamente otra cosa, Claude puede priorizarla sobre el aviso (ver Limitaciones).
+
+También con el plugin ya instalado y el umbral por defecto (150000): con un contexto real de más de 150k tokens, el segundo turno recibió el aviso, recomendó limpiar, guardó el estado y entregó el prompt de reanudación; el tercero no lo repitió. La secuencia de dos pasos (aviso a 150k y recordatorio a 200k) está cubierta solo por tests unitarios.
 
 ## Desarrollo
 

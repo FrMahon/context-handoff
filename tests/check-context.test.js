@@ -1,11 +1,14 @@
 const test = require('node:test');
+const { after } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { getContextTokens, getThreshold, decide, run } = require('../hooks/check-context.js');
 
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ch-'));
+const dirs = [];
+const tmp = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ch-')); dirs.push(d); return d; };
+after(() => dirs.forEach((d) => fs.rmSync(d, { recursive: true, force: true })));
 const asst = (i, c, r, extra = {}) => JSON.stringify({
   type: 'assistant',
   message: { usage: { input_tokens: i, cache_creation_input_tokens: c, cache_read_input_tokens: r } },
@@ -152,4 +155,10 @@ test('hook messages name the plugin-qualified skill', () => {
 
 test('reminder asks to refresh the handoff if state changed', () => {
   assert.match(decide({ tokens: 200000, threshold: 150000, stage: 1 }).message, /refresh/i);
+});
+
+test('finds usage when a huge user line (300KB) sits after the last assistant message', () => {
+  const big = JSON.stringify({ type: 'user', text: 'y'.repeat(300 * 1024) });
+  const f = write([asst(5, 6, 7), big]);
+  assert.strictEqual(getContextTokens(f), 18);
 });

@@ -1,7 +1,26 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const TAIL_BYTES = 256 * 1024;
+// Read the end of the transcript; widen once if a huge pasted prompt hides the last assistant entry.
+const WINDOWS = [256 * 1024, 8 * 1024 * 1024];
+
+function lastUsage(fd, size, bytes) {
+  const start = Math.max(0, size - bytes);
+  const buf = Buffer.alloc(size - start);
+  fs.readSync(fd, buf, 0, buf.length, start);
+  const lines = buf.toString('utf8').split('\n');
+  if (start > 0) lines.shift(); // first line is cut mid-way
+  for (let i = lines.length - 1; i >= 0; i--) {
+    let entry;
+    try { entry = JSON.parse(lines[i]); } catch { continue; }
+    if (entry.type !== 'assistant' || entry.isSidechain) continue;
+    const u = entry.message && entry.message.usage;
+    if (!u) continue;
+    const total = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+    if (total > 0) return total;
+  }
+  return null;
+}
 
 // Context size = tokens the model saw on its last turn, from the transcript's last assistant usage.
 function getContextTokens(transcriptPath) {
@@ -9,19 +28,9 @@ function getContextTokens(transcriptPath) {
     const fd = fs.openSync(transcriptPath, 'r');
     try {
       const size = fs.fstatSync(fd).size;
-      const start = Math.max(0, size - TAIL_BYTES);
-      const buf = Buffer.alloc(size - start);
-      fs.readSync(fd, buf, 0, buf.length, start);
-      const lines = buf.toString('utf8').split('\n');
-      if (start > 0) lines.shift(); // first line is cut mid-way
-      for (let i = lines.length - 1; i >= 0; i--) {
-        let entry;
-        try { entry = JSON.parse(lines[i]); } catch { continue; }
-        if (entry.type !== 'assistant' || entry.isSidechain) continue;
-        const u = entry.message && entry.message.usage;
-        if (!u) continue;
-        const total = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-        if (total > 0) return total;
+      for (const bytes of WINDOWS) {
+        const found = lastUsage(fd, size, bytes);
+        if (found !== null || bytes >= size) return found;
       }
       return null;
     } finally {
