@@ -91,8 +91,10 @@ test('decide: first sight above threshold+50000 sends the full warning and jumps
   assert.match(r.message, /context-handoff/);
 });
 
-test('decide: tokens below half the threshold rearm to stage 0', () => {
-  assert.deepStrictEqual(decide({ tokens: 40000, threshold: 150000, stage: 2 }), { stage: 0, message: null });
+test('decide: tokens below the threshold rearm to stage 0 (e.g. after /compact)', () => {
+  for (const tokens of [40000, 100000, 149999]) {
+    assert.deepStrictEqual(decide({ tokens, threshold: 150000, stage: 2 }), { stage: 0, message: null });
+  }
 });
 
 const ENV = { CONTEXT_HANDOFF_THRESHOLD: '100' };

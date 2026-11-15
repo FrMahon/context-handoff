@@ -56,7 +56,7 @@ const REMINDER = 'CONTEXT HANDOFF REMINDER: context keeps growing. If the handof
 
 // stage: 0 = nothing sent, 1 = warned, 2 = reminded. Only a rise in stage produces a message.
 function decide({ tokens, threshold, stage }) {
-  if (tokens < threshold * 0.5) return { stage: 0, message: null };
+  if (tokens < threshold) return { stage: 0, message: null };
   if (stage === 0 && tokens >= threshold) {
     return { stage: tokens >= threshold + REMINDER_GAP ? 2 : 1, message: ALERT };
   }
